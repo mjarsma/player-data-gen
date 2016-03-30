@@ -1,6 +1,7 @@
 from barnum import gen_data
 import numpy as np
 import random
+import csv
 import sys
 import os
 from matplotlib import pyplot as plt
@@ -12,81 +13,120 @@ SIGMA = 10
 # Number of players created via draft
 NUM_OF_PLAYERS = 450
 
+# Player attributes
+player_attribute_keys = ("offense",
+                         "defense",
+                         "athleticism",
+                         "attitude")
+
+# Player offense attributes
+player_offense_keys = ("puck_control",
+                       "deking",
+                       "hand_eye_coordination",
+                       "offensive_awareness",
+                       "passing",
+                       "shooting_accuracy",
+                       "shooting_power")
+
+# Player defense attributes
+player_defense_keys = ("body_checking",
+                       "stick_checking",
+                       "defensive_awareness",
+                       "shot_blocking",
+                       "positioning")
+
+# Player athleticism attributes
+player_athleticism_keys = ("acceleration",
+                           "agility",
+                           "balance",
+                           "durability",
+                           "endurance",
+                           "top_speed",
+                           "strength")
+
+# Player attitude attributes
+player_attitude_keys = ("leadership",
+                        "aggressiveness",
+                        "poise",
+                        "self_control",
+                        "confidence",
+                        "work_ethic")
+
 # List of teams
 teams_list = ["Nashville Predators",
-                "Anaheim Ducks",
-                "San Jose Sharks",
-                "Montreal Canadiens",
-                "Vancouver Canucks",
-                "Toronto Maple Leafs",
-                "Los Angeles Kings",
-                "New York Rangers",
-                "New York Islanders",
-                "Washington Capitals",
-                "Carolina Hurricanes",
-                "Florida Panthers",
-                "Tampa Bay Lightning",
-                "Winnipeg Jets",
-                "Dallas Stars",
-                "Calgary Flames",
-                "Edmonton Oilers",
-                "Arizona Coyotes",
-                "St. Louis Blues",
-                "Chicago Blackhawks",
-                "Minnesota Wild",
-                "Colorado Avalanche",
-                "Boston Bruins",
-                "Ottawa Senators",
-                "Pittsburgh Penguins",
-                "Philadelphia Flyers",
-                "Detroit Red Wings",
-                "New Jersey Devils",
-                "Columbus Blue Jackets"]
+              "Anaheim Ducks",
+              "San Jose Sharks",
+              "Montreal Canadiens",
+              "Vancouver Canucks",
+              "Toronto Maple Leafs",
+              "Los Angeles Kings",
+              "New York Rangers",
+              "New York Islanders",
+              "Washington Capitals",
+              "Carolina Hurricanes",
+              "Florida Panthers",
+              "Tampa Bay Lightning",
+              "Winnipeg Jets",
+              "Dallas Stars",
+              "Calgary Flames",
+              "Edmonton Oilers",
+              "Arizona Coyotes",
+              "St. Louis Blues",
+              "Chicago Blackhawks",
+              "Minnesota Wild",
+              "Colorado Avalanche",
+              "Boston Bruins",
+              "Ottawa Senators",
+              "Pittsburgh Penguins",
+              "Philadelphia Flyers",
+              "Detroit Red Wings",
+              "New Jersey Devils",
+              "Columbus Blue Jackets"]
+
 
 def cls():
     os.system('cls' if os.name == 'nt' else 'clear')
 
-# Create an empty json shell for the player data
-# [May be redundant]
-def create_player(potential_overall, name, draft_year, drafted_by):
-    keys = ("attributes", "potential_overall", "id", "name", "draft_year")
-    player = dict.fromkeys(keys, None)
-    attribute_keys = ("offense", "defense", "athleticism", "attitude")
-    offense_keys = ("puck_control",
-                    "deking",
-                    "hand_eye_coordination",
-                    "offensive_awareness",
-                    "passing",
-                    "shooting_accuracy",
-                    "shooting_power")
-    defense_keys = ("body_checking",
-                    "stick_checking",
-                    "defensive_awareness",
-                    "shot_blocking",
-                    "positioning")
-    athleticism_keys = ("acceleration",
-                        "agility",
-                        "balance",
-                        "durability",
-                        "endurance",
-                        "top_speed",
-                        "strength")
-    attitude_keys = ("leadership",
-                     "aggressiveness",
-                     "poise",
-                     "self_control",
-                     "confidence",
-                     "work_ethic")
-    player["attributes"] = dict.fromkeys(attribute_keys, None)
-    player["attributes"]["offense"] = dict.fromkeys(offense_keys, None)
-    player["attributes"]["defense"] = dict.fromkeys(defense_keys, None)
-    player["attributes"]["athleticism"] = dict.fromkeys(athleticism_keys, None)
-    player["attributes"]["attitude"] = dict.fromkeys(attitude_keys, None)
-    player["potential_overall"] = potential_overall
-    player["draft_year"] = draft_year
-    player["drafted_by"] = drafted_by
-    player["name"] = name
-    return player
+
+class Player(object):
+    """ A player of a hockey team.
+
+    Attributes:
+        first_name: A string representing player's first name.
+        last_name: A string representing player's last name.
+        overall : An integer representing player's current overall ability.
+        draft_year : An integer representing player's draft year.
+    """
+
+    def __init__(self, overall, first_name, last_name, draft_year):
+        self.id = id
+        self.overall = overall
+        self.first_name = first_name
+        self.last_name = last_name
+        self.draft_year = draft_year
+        self.drafted_by = None
+        self.attributes = []
+        self.attributes = dict.fromkeys(player_attribute_keys, None)
+        self.attributes["offense"] = dict.fromkeys(player_offense_keys, None)
+        self.attributes["defense"] = dict.fromkeys(player_defense_keys, None)
+        self.attributes["athleticism"] = dict.fromkeys(player_athleticism_keys, None)
+        self.attributes["attitude"] = dict.fromkeys(player_attitude_keys, None)
+
+    def get_overall(self):
+        return self.overall
+
+
+class PersonFactory(object):
+    @staticmethod
+    def create_person(person_type):
+        if person_type == 'Player':
+            return Player()
+        elif person_type == 'Coach':
+            pass
+        else:
+            pass
+
+
 
 # Create player overalls according to Poisson-distribution
 def create_players_via_draft_batch_overalls(mean, number_of_players):
@@ -119,10 +159,25 @@ def get_teams_json():
         teams.append(elements)
     return teams
 
+def get_player_names(num_of_players):
+    names = []
+    with open('some.csv', 'rb', errors='strict') as f:
+        reader = csv.reader(f)
+        try:
+            for row in reader:
+                print(row)
+        except csv.Error as e:
+            sys.exit('file %s, line %d: %s' % (filename, reader.line_num, e))
+        random.randint(1, 10)
+
+
 def create_players_via_draft_batch(start, end):
     list_of_players = [{}]
     players_overalls = create_player_attributes(create_players_via_draft_batch_overalls(72, NUM_OF_PLAYERS))
-    for year in range(start, end):
+    number_of_draft_classes = range(start, end)
+    # gen names for each player:
+    list_of_names = get_player_names(number_of_draft_classes * NUM_OF_PLAYERS)
+    for year in number_of_draft_classes:
         for i in range(NUM_OF_PLAYERS):
             potential_overall = int(players_overalls[i][0])
             name = gen_data.create_name()
@@ -171,7 +226,6 @@ def draft_players_to_teams(draft_year):
 
 if __name__ == "__main__":
 
-    #
     while True:
         try:
             # cls()
