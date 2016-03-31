@@ -1,13 +1,17 @@
-from barnum import gen_data
+# encoding=utf-8
+
+import pymongo
 import numpy as np
 import random
 import csv
+import json
 import sys
 import os
+from barnum import gen_data
 from matplotlib import pyplot as plt
-import pymongo
-client = pymongo.MongoClient('localhost:27017')
-db = client.dev
+from src.db import connect
+conn = connect('localhost:27017')
+db = conn.get_database
 
 SIGMA = 10
 # Number of players created via draft
@@ -85,6 +89,9 @@ teams_list = ["Nashville Predators",
 
 
 def cls():
+    """
+    Clear the CLI
+    """
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
@@ -94,7 +101,7 @@ class Player(object):
     Attributes:
         first_name: A string representing player's first name.
         last_name: A string representing player's last name.
-        overall : An integer representing player's current overall ability.
+        overall : An integer representing player's potential overall ability.
         draft_year : An integer representing player's draft year.
     """
 
@@ -116,21 +123,10 @@ class Player(object):
         return self.overall
 
 
-class PersonFactory(object):
-    @staticmethod
-    def create_person(person_type):
-        if person_type == 'Player':
-            return Player()
-        elif person_type == 'Coach':
-            pass
-        else:
-            pass
-
-
-
 # Create player overalls according to Poisson-distribution
 def create_players_via_draft_batch_overalls(mean, number_of_players):
     return np.random.poisson(mean, size=number_of_players).tolist()
+
 
 # Create player attributes derived from the overall
 def create_player_attributes(draft_class):
@@ -142,37 +138,32 @@ def create_player_attributes(draft_class):
         i += 1
     return draft_class_with_attrs
 
+
 # Create a value for a player attribute from a normal distribution
 def generate_number(mean):
-    x = np.random.normal_variate(mean, SIGMA)
+    x = np.random.normal(mean, SIGMA)
     while x > mean+4 or x < mean-4:
-        x = np.random.normalvariate(mean, SIGMA)
+        x = np.random.normal(mean, SIGMA)
     return x
 
+# dump teams_list to json
 def get_teams_json():
-    teams = []
-    for val in range(len(teams_list)):
-        elements =  {}
-        elements['team'] = teams_list[val]
-        # uuid.uuid4 should have a seed to be safe from generating two identical IDs
-        # elements['id'] = str(uuid.uuid4())
-        teams.append(elements)
-    return teams
+    return json.dumps(teams_list)
 
 def get_player_names(num_of_players):
     names = []
-    with open('some.csv', 'rb', errors='strict') as f:
+    with open('player_names.csv', 'rb') as f:
         reader = csv.reader(f)
         try:
             for row in reader:
                 print(row)
         except csv.Error as e:
-            sys.exit('file %s, line %d: %s' % (filename, reader.line_num, e))
+            sys.exit('file %s, line %d: %s' % ('player_names.csv', reader.line_num, e))
         random.randint(1, 10)
 
 
 def create_players_via_draft_batch(start, end):
-    list_of_players = [{}]
+    list_of_players = []
     players_overalls = create_player_attributes(create_players_via_draft_batch_overalls(72, NUM_OF_PLAYERS))
     number_of_draft_classes = range(start, end)
     # gen names for each player:
@@ -181,10 +172,10 @@ def create_players_via_draft_batch(start, end):
         for i in range(NUM_OF_PLAYERS):
             potential_overall = int(players_overalls[i][0])
             name = gen_data.create_name()
-            list_of_players.append(create_player(name=name,
-                                                 potential_overall=potential_overall,
-                                                 draft_year=year,
-                                                 drafted_by=None))
+            list_of_players.append(Player(name=name,
+                                          potential_overall=potential_overall,
+                                          draft_year=year,
+                                          drafted_by=None))
             i += 1
         print("Year: ", year)
         print("Num of players: ", i)
@@ -193,6 +184,9 @@ def create_players_via_draft_batch(start, end):
     return list_of_players
 
 def create_draft_order():
+    """
+
+    """
     draft_template = dict.fromkeys(("year", "order"), None)
     draft_order_list = list(range(1, 31))
     draft_template["order"] = dict.fromkeys(draft_order_list, None)
@@ -214,7 +208,7 @@ def draft_players_to_teams(draft_year):
     # print(draft_order)
     cursor = db.players.find({"draft_year": draft_year}).sort([("potential_overall", pymongo.DESCENDING)])
     # Initialize a bulk op for updating the players' draft info
-    bulk = db.players.initialize_unordered_bulk_op();
+    bulk = db.players.initialize_unordered_bulk_op()
     draft_num = 1
     for player in cursor:
         bulk.find({"_id": player["_id"]}).\
@@ -222,10 +216,9 @@ def draft_players_to_teams(draft_year):
         draft_num += 1
         if draft_num >= 31:
             draft_num = 1
-    results = bulk.execute()
+    bulk.execute()
 
-if __name__ == "__main__":
-
+def main():
     while True:
         try:
             # cls()
@@ -262,7 +255,6 @@ if __name__ == "__main__":
                 client.close()
                 break
 
-
         except IOError as e:
             print("I/O error({0}): {1}".format(e.errno, e.strerror))
         except ValueError:
@@ -270,3 +262,6 @@ if __name__ == "__main__":
         except:
             print("Unexpected error:", sys.exc_info()[0])
             raise
+
+if __name__ == '__main__':
+    main()
